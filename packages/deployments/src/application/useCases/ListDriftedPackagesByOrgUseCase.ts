@@ -177,6 +177,26 @@ function isDeployedArtifactDrifted(
   return deployedVersion < latestVersion;
 }
 
+/**
+ * A package artifact is "not distributed" when it still exists in Packmind but
+ * was never deployed to a target the package is active on. The space overview
+ * surfaces this as a `not-distributed` drift reason, so governance must too —
+ * otherwise a package whose only drift is a freshly-added, undistributed
+ * artifact appears aligned here while showing as drifted in the overview.
+ *
+ * Existence is checked against `latestVersions` to mirror the overview, which
+ * only lists pending artifacts that still resolve to a current version.
+ */
+function hasNotDistributedDrift(
+  artifactIds: ReadonlyArray<string>,
+  latestVersions: Map<string, number>,
+  deployedIds: Set<string>,
+): boolean {
+  return artifactIds.some(
+    (id) => latestVersions.has(id) && !deployedIds.has(id),
+  );
+}
+
 function computeDriftedTargets(
   outdatedByTarget: OutdatedDeploymentsByTarget[],
   activeOps: ReadonlyArray<ActivePackageOperationRow>,
@@ -193,13 +213,30 @@ function computeDriftedTargets(
     }
   }
 
+  const outdatedByTargetId = new Map<TargetId, OutdatedDeploymentsByTarget>(
+    outdatedByTarget.map((o) => [o.targetId, o]),
+  );
+
   const driftedTargetsByPackage = new Map<PackageId, Set<TargetId>>();
-  for (const outdated of outdatedByTarget) {
-    const packageIdsOnTarget = opsByTarget.get(outdated.targetId);
-    if (!packageIdsOnTarget?.length) continue;
+  // Iterate over every target the packages are active on — not only the ones
+  // with outdated deployments — so targets whose sole drift is an
+  // undistributed artifact are still considered.
+  for (const [targetId, packageIdsOnTarget] of opsByTarget) {
+    if (!packageIdsOnTarget.length) continue;
+    const outdated = outdatedByTargetId.get(targetId);
+
+    const deployedStandardIds = new Set(
+      (outdated?.standards ?? []).map((s) => s.artifactId as string),
+    );
+    const deployedRecipeIds = new Set(
+      (outdated?.recipes ?? []).map((r) => r.artifactId as string),
+    );
+    const deployedSkillIds = new Set(
+      (outdated?.skills ?? []).map((s) => s.artifactId as string),
+    );
 
     const driftedStandardIds = new Set(
-      outdated.standards
+      (outdated?.standards ?? [])
         .filter((s) =>
           isDeployedArtifactDrifted(
             s.deployedVersion,
@@ -209,7 +246,7 @@ function computeDriftedTargets(
         .map((s) => s.artifactId as string),
     );
     const driftedRecipeIds = new Set(
-      outdated.recipes
+      (outdated?.recipes ?? [])
         .filter((r) =>
           isDeployedArtifactDrifted(
             r.deployedVersion,
@@ -219,7 +256,7 @@ function computeDriftedTargets(
         .map((r) => r.artifactId as string),
     );
     const driftedSkillIds = new Set(
-      outdated.skills
+      (outdated?.skills ?? [])
         .filter((s) =>
           isDeployedArtifactDrifted(
             s.deployedVersion,
@@ -232,18 +269,40 @@ function computeDriftedTargets(
     for (const packageId of packageIdsOnTarget) {
       const pkg = packagesById.get(packageId);
       if (!pkg) continue;
-      const hasDrift =
-        pkg.standards.some((id) => driftedStandardIds.has(id)) ||
-        pkg.recipes.some((id) => driftedRecipeIds.has(id)) ||
-        pkg.skills.some((id) => driftedSkillIds.has(id));
-      if (!hasDrift) continue;
+      const standardIds = pkg.standards.map((id) => id as string);
+      const recipeIds = pkg.recipes.map((id) => id as string);
+      const skillIds = pkg.skills.map((id) => id as string);
+
+      const hasBehindOrRemovalDrift =
+        standardIds.some((id) => driftedStandardIds.has(id)) ||
+        recipeIds.some((id) => driftedRecipeIds.has(id)) ||
+        skillIds.some((id) => driftedSkillIds.has(id));
+
+      const hasUndistributedDrift =
+        hasNotDistributedDrift(
+          standardIds,
+          latestVersions.standards,
+          deployedStandardIds,
+        ) ||
+        hasNotDistributedDrift(
+          recipeIds,
+          latestVersions.recipes,
+          deployedRecipeIds,
+        ) ||
+        hasNotDistributedDrift(
+          skillIds,
+          latestVersions.skills,
+          deployedSkillIds,
+        );
+
+      if (!hasBehindOrRemovalDrift && !hasUndistributedDrift) continue;
 
       let bucket = driftedTargetsByPackage.get(packageId);
       if (!bucket) {
         bucket = new Set();
         driftedTargetsByPackage.set(packageId, bucket);
       }
-      bucket.add(outdated.targetId);
+      bucket.add(targetId);
     }
   }
   return driftedTargetsByPackage;

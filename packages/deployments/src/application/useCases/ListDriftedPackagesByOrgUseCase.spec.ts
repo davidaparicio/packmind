@@ -311,8 +311,11 @@ describe('ListDriftedPackagesByOrgUseCase', () => {
         mockSpacesPort.listSpacesByOrganization.mockResolvedValue([
           space('space-1', 'space-one', 'Space One'),
         ]);
+        // The package's own standard is deployed and aligned (version 1); only
+        // another package's standard is behind on this target, so the package
+        // under test must stay drift-free.
         mockDistributionRepository.findOutdatedDeploymentsBySpace.mockResolvedValue(
-          [outdatedOnTarget(target, [otherStd])],
+          [outdatedOnTarget(target, [otherStd, ownedStd])],
         );
         mockDistributionRepository.findActivePackageOperationsBySpace.mockResolvedValue(
           [activeOp(pkgId, target)],
@@ -359,6 +362,54 @@ describe('ListDriftedPackagesByOrgUseCase', () => {
       it('does not report the package as drifted', async () => {
         const result = await useCase['executeForMembers'](baseCommand);
         expect(result).toEqual([]);
+      });
+    });
+
+    describe('when a package artifact has never been distributed to its targets', () => {
+      const spaceId = createSpaceId('space-1');
+      const packageId = createPackageId('pkg-1');
+      const deployedStd = createStandardId('std-deployed');
+      const addedStd = createStandardId('std-added');
+      const target1 = createTargetId('target-1');
+      const target2 = createTargetId('target-2');
+
+      beforeEach(() => {
+        mockSpacesPort.listSpacesByOrganization.mockResolvedValue([
+          space('space-1', 'design-system', 'Design System'),
+        ]);
+        // Each target has the original standard deployed and aligned, but the
+        // newly added standard was never distributed to either target.
+        mockDistributionRepository.findOutdatedDeploymentsBySpace.mockResolvedValue(
+          [
+            outdatedOnTarget(target1, [deployedStd]),
+            outdatedOnTarget(target2, [deployedStd]),
+          ],
+        );
+        mockDistributionRepository.findActivePackageOperationsBySpace.mockResolvedValue(
+          [activeOp(packageId, target1), activeOp(packageId, target2)],
+        );
+        mockPackageRepository.findBySpaceId.mockResolvedValue([
+          pkg('pkg-1', 'qc', spaceId, [deployedStd, addedStd]),
+        ]);
+        mockStandardsPort.listAllStandardsByOrganization.mockResolvedValue([
+          standardVersion(deployedStd, 1),
+          standardVersion(addedStd, 1),
+        ]);
+      });
+
+      it('reports the package as drifted on both targets', async () => {
+        const result = await useCase['executeForMembers'](baseCommand);
+        expect(result).toEqual([
+          {
+            packageId,
+            packageName: 'qc',
+            spaceId,
+            spaceSlug: 'design-system',
+            spaceName: 'Design System',
+            behindDistributions: 2,
+            lastUpdatedAt: '2026-06-15T10:00:00.000Z',
+          },
+        ]);
       });
     });
 
