@@ -5,14 +5,14 @@ x-nx-env: &nx-env
   NX_WATCHER_POLLING_INTERVAL: '1000'
   NX_ISOLATE_PLUGINS: 'false'
   NX_PLUGIN_NO_TIMEOUTS: 'true'
-  PACKMIND_EDITION: ${PACKMIND_EDITION:-oss}
+  PACKMIND_EDITION: ${PACKMIND_EDITION:-proprietary}
 
 services:
   nx-daemon:
     profiles:
       - dev
     image: node:24.15.0-alpine3.23
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-nx-daemon
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-nx-daemon
     working_dir: /packmind
     command: >
       sh -lc "
@@ -46,7 +46,7 @@ services:
 
   postgres:
     image: postgres:17-alpine
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-postgres
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -64,7 +64,7 @@ services:
 
   redis:
     image: redis:7.2.4
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-redis
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-redis
     ports:
       - '6380:6379'
     volumes:
@@ -80,7 +80,7 @@ services:
     profiles:
       - dev
     image: dpage/pgadmin4:latest
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-pgadmin
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@pgadmin.com
       PGADMIN_DEFAULT_PASSWORD: password
@@ -94,7 +94,7 @@ services:
 
   install-dependencies:
     image: node:24.15.0-alpine3.23
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-install-deps
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-install-deps
     working_dir: /packmind
     environment:
       HUSKY: '0'
@@ -119,7 +119,7 @@ services:
 
   run-migrations:
     image: node:24.15.0-alpine3.23
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-run-migrations
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-run-migrations
     working_dir: /packmind
     entrypoint: >
       sh -lc '
@@ -133,7 +133,7 @@ services:
     environment:
       CI: ${CI:-}
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/packmind
-      PACKMIND_EDITION: ${PACKMIND_EDITION:-oss}
+      PACKMIND_EDITION: ${PACKMIND_EDITION:-proprietary}
     volumes:
       - .:/packmind
       - dev-node_modules:/packmind/node_modules
@@ -147,7 +147,7 @@ services:
 
   frontend:
     image: node:24.15.0-alpine3.23
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-frontend
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-frontend
     working_dir: /packmind
     ports:
       - '4201:4200'
@@ -193,7 +193,7 @@ services:
 
   backend:
     image: node:24.15.0-alpine3.23
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-backend
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-backend
     working_dir: /packmind
     entrypoint: >
       sh -lc '
@@ -249,7 +249,7 @@ services:
 
   mcp-server:
     image: node:24.15.0-alpine3.23
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-mcp-server
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-mcp-server
     working_dir: /packmind
     entrypoint: >
       sh -lc '
@@ -291,7 +291,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-oss}-packmind-nginx
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-${PACKMIND_EDITION:-proprietary}-packmind-nginx
     ports:
       - '443:443'
     entrypoint:
@@ -314,7 +314,7 @@ services:
 
   run-e2e-tests:
     image: mcr.microsoft.com/playwright:v1.58.2-jammy
-    container_name: ${COMPOSE_PROJECT_NAME:-dev}-run-e2e-tests-${PACKMIND_EDITION:-oss}
+    container_name: ${COMPOSE_PROJECT_NAME:-dev}-run-e2e-tests-${PACKMIND_EDITION:-proprietary}
     profiles:
       - e2e
     volumes:
