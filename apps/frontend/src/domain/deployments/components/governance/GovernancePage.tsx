@@ -2,7 +2,8 @@ import { PMHStack, PMPage, PMVStack } from '@packmind/ui';
 import { useAuthContext } from '../../../accounts/hooks/useAuthContext';
 import { useListDriftedPackagesByOrgQuery } from '../../api/queries/DeploymentsQueries';
 import { GovernanceDriftSection } from './GovernanceDriftSection';
-import { GovernancePlaceholderSection } from './GovernancePlaceholderSection';
+import { GovernanceApprovalsSection } from './approvals/GovernanceApprovalsSection';
+import { useGovernanceApprovalsFeed } from './approvals/useGovernanceApprovalsFeed';
 import { GovernanceActivitySection } from './activity/GovernanceActivitySection';
 import { useGovernanceActivityFeed } from './activity/useGovernanceActivityFeed';
 
@@ -17,6 +18,7 @@ export function GovernancePage() {
     isError: isDriftError,
     refetch,
   } = useListDriftedPackagesByOrgQuery();
+  const approvals = useGovernanceApprovalsFeed();
   const activity = useGovernanceActivityFeed();
 
   return (
@@ -37,9 +39,12 @@ export function GovernancePage() {
             }}
             orgSlug={organization?.slug ?? ''}
           />
-          <GovernancePlaceholderSection
-            label="Approvals"
-            tagline="Review proposed changes before they ship."
+          <GovernanceApprovalsSection
+            entries={approvals.entries}
+            isLoading={approvals.isLoading}
+            isError={approvals.isError}
+            onRetry={approvals.refetch}
+            orgSlug={organization?.slug ?? ''}
           />
         </PMVStack>
         <PMVStack
