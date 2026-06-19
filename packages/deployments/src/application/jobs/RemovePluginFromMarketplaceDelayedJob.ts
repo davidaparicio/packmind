@@ -6,7 +6,6 @@ import {
   QueueListeners,
   WorkerListeners,
 } from '@packmind/node-utils';
-import { GitRepoService } from '@packmind/git';
 import {
   DeleteItem,
   DeleteItemType,
@@ -87,7 +86,6 @@ export class RemovePluginFromMarketplaceDelayedJob extends AbstractAIDelayedJob<
     >,
     private readonly marketplaceDistributionRepository: IMarketplaceDistributionRepository,
     private readonly marketplaceRepository: IMarketplaceRepository,
-    private readonly gitRepoService: GitRepoService,
     private readonly gitPort: IGitPort,
     private readonly parserRegistry: MarketplaceDescriptorParserRegistry,
     logger: PackmindLogger = new PackmindLogger(logOrigin),
@@ -121,10 +119,9 @@ export class RemovePluginFromMarketplaceDelayedJob extends AbstractAIDelayedJob<
     // critical for the package-deletion cascade where the package is gone.
     const pluginSlug = distribution.pluginSlug;
 
-    const marketplaceGitRepo =
-      await this.gitRepoService.findMarketplaceGitRepoById(
-        marketplace.gitRepoId,
-      );
+    const marketplaceGitRepo = await this.gitPort.findMarketplaceGitRepoById(
+      marketplace.gitRepoId,
+    );
     if (!marketplaceGitRepo) {
       throw new Error(
         `[${this.origin}] Marketplace git repo not found for marketplace ${input.marketplaceId}`,

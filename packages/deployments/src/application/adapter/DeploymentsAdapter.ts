@@ -128,8 +128,7 @@ import {
   ValidateMarketplaceUrlCommand,
   ValidateMarketplaceUrlResponse,
 } from '@packmind/types';
-import { GitRepoService } from '@packmind/git';
-import { IDeploymentsDelayedJobs } from '../../domain/jobs';
+import { IDeploymentsDelayedJobs } from '../jobs/IDeploymentsDelayedJobs';
 import { IDistributionRepository } from '../../domain/repositories/IDistributionRepository';
 import { IDistributedPackageRepository } from '../../domain/repositories/IDistributedPackageRepository';
 import { IMarketplaceDistributionRepository } from '../../domain/repositories/IMarketplaceDistributionRepository';
@@ -280,7 +279,6 @@ export class DeploymentsAdapter
     private readonly marketplaceDistributionRepository: IMarketplaceDistributionRepository,
     private readonly pluginInstallationRepository: IPluginInstallationRepository,
     private readonly marketplaceDescriptorParserRegistry: MarketplaceDescriptorParserRegistry,
-    private readonly gitRepoService: GitRepoService,
     private readonly logger: PackmindLogger = new PackmindLogger(origin),
   ) {}
 
@@ -327,6 +325,16 @@ export class DeploymentsAdapter
     ) {
       throw new Error('DeploymentsAdapter: Required ports not provided');
     }
+
+    // Wire cross-domain ports into PackageService so it can hydrate package
+    // artefacts (recipes/standards/skills) through ports instead of the
+    // repository reaching into other domains' tables.
+    this.deploymentsServices.getPackageService().setArtefactPorts({
+      recipesPort: this.recipesPort,
+      standardsPort: this.standardsPort,
+      skillsPort: this.skillsPort,
+      spacesPort: this.spacesPort,
+    });
 
     // Step 4: Create all use cases with non-null ports
     // DeployDefaultSkillsUseCase must be created first as it's used by PublishArtifactsUseCase
@@ -475,6 +483,7 @@ export class DeploymentsAdapter
       this.recipesPort,
       this.standardsPort,
       this.skillsPort,
+      this.codingAgentPort,
       this.spacesPort,
       this.accountsPort,
       targetResolutionService,
@@ -666,7 +675,6 @@ export class DeploymentsAdapter
     // both Link/Unlink can drive the BullMQ repeatable schedule.
     this._linkMarketplaceUseCase = new LinkMarketplaceUseCase(
       this.marketplaceRepository,
-      this.gitRepoService,
       this.gitPort,
       this.marketplaceDescriptorParserRegistry,
       ports.eventEmitterService,
@@ -684,7 +692,6 @@ export class DeploymentsAdapter
 
     this._listMarketplacesUseCase = new ListMarketplacesUseCase(
       this.marketplaceRepository,
-      this.gitRepoService,
       this.gitPort,
       this.accountsPort,
     );
@@ -702,7 +709,6 @@ export class DeploymentsAdapter
         this.deploymentsServices.getPackageService(),
         this.spacesPort,
         this.gitPort,
-        this.gitRepoService,
         this.marketplaceDescriptorParserRegistry,
         ports.eventEmitterService,
         this.deploymentsDelayedJobs.publishPluginToMarketplaceDelayedJob,
@@ -807,7 +813,6 @@ export class DeploymentsAdapter
     const reconciliationFactory = new MarketplaceReconciliationJobFactory(
       this.marketplaceRepository,
       this.marketplaceDistributionRepository,
-      this.gitRepoService,
       this.gitPort!,
       this.marketplaceDescriptorParserRegistry,
       this.deploymentsServices.getPackageService(),
@@ -836,7 +841,6 @@ export class DeploymentsAdapter
         this.marketplaceDistributionRepository,
         this.marketplaceRepository,
         this.deploymentsServices.getPackageService(),
-        this.gitRepoService,
         this.gitPort!,
         this.marketplaceDescriptorParserRegistry,
         async (params) => this.renderPluginForPublishJob(params),
@@ -863,7 +867,6 @@ export class DeploymentsAdapter
       new RemovePluginFromMarketplaceJobFactory(
         this.marketplaceDistributionRepository,
         this.marketplaceRepository,
-        this.gitRepoService,
         this.gitPort!,
         this.marketplaceDescriptorParserRegistry,
       );

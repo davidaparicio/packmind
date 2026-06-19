@@ -5,7 +5,6 @@ import {
   MemberContext,
   PackmindEventEmitterService,
 } from '@packmind/node-utils';
-import { GitRepoService } from '@packmind/git';
 import {
   createMarketplaceDistributionId,
   DistributionStatus,
@@ -76,7 +75,6 @@ export class PublishPackageOnMarketplaceUseCase
     private readonly packageService: PackageService,
     private readonly spacesPort: ISpacesPort,
     private readonly gitPort: IGitPort,
-    private readonly gitRepoService: GitRepoService,
     private readonly parserRegistry: MarketplaceDescriptorParserRegistry,
     private readonly eventEmitterService: PackmindEventEmitterService,
     private readonly publishJob: PublishPluginToMarketplaceDelayedJob,
@@ -118,10 +116,9 @@ export class PublishPackageOnMarketplaceUseCase
     }
 
     // 3. Resolve the marketplace's git repo + git provider; preflight the token.
-    const marketplaceGitRepo =
-      await this.gitRepoService.findMarketplaceGitRepoById(
-        marketplace.gitRepoId,
-      );
+    const marketplaceGitRepo = await this.gitPort.findMarketplaceGitRepoById(
+      marketplace.gitRepoId,
+    );
     if (!marketplaceGitRepo) {
       this.logger.error('Marketplace git repo missing on publish', {
         marketplaceId,

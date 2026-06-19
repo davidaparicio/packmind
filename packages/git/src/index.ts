@@ -9,10 +9,8 @@ export {
   GithubTokenResolverFactory,
   resolveGithubAppMode,
 } from './infra/repositories/github/auth/GithubTokenResolverFactory';
-export type {
-  GithubAppMode,
-  IConfigProvider,
-} from './infra/repositories/github/auth/GithubTokenResolverFactory';
+export type { IConfigProvider } from './infra/repositories/github/auth/GithubTokenResolverFactory';
+export type { GithubAppMode } from '@packmind/types';
 export {
   InstallStateSigner,
   InvalidInstallStateError,

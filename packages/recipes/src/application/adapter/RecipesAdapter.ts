@@ -33,7 +33,7 @@ import {
   UpdateRecipeFromUIResponse,
   UserId,
 } from '@packmind/types';
-import { IRecipesDelayedJobs } from '../../domain/jobs/IRecipesDelayedJobs';
+import { IRecipesDelayedJobs } from '../jobs/IRecipesDelayedJobs';
 import { DeployRecipesJobFactory } from '../../infra/jobs/DeployRecipesJobFactory';
 import { UpdateRecipesAndGenerateSummariesJobFactory } from '../../infra/jobs/UpdateRecipesAndGenerateSummariesJobFactory';
 import { RecipesServices } from '../services/RecipesServices';
@@ -304,6 +304,14 @@ export class RecipesAdapter
    */
   public getRecipeByIdInternal(id: RecipeId) {
     return this._getRecipeById.getRecipeById(id);
+  }
+
+  /**
+   * Get recipes by IDs without access control (internal use only).
+   * Batch sibling of getRecipeByIdInternal for cross-domain hydration.
+   */
+  public getRecipesByIdsInternal(ids: RecipeId[]): Promise<Recipe[]> {
+    return this._getRecipeById.getRecipesByIds(ids);
   }
 
   public findRecipeBySlug(
